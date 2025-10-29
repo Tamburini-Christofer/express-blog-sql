@@ -1,86 +1,46 @@
-//todo Importo i post
-const posts = require("../data/postsArray");
+import connection from '../data/db.js';
 
-const connection = require('../data/db');
-
-function index(req, res) {
-  const tag = req.query.tags;
-
-function show(req, res) {
-      connection.query(sql, (err, results) => {
-        if (err) return res.status(500).json({ error: 'Database query failed' });
-        res.json(results);
-    });
-  const id = parseInt(req.params.id);
-
-    connection.query('DELETE FROM posts WHERE id = ?', [id], (err) => {
-
-        if (err) 
-          return res.status(500).json({ error: 'Failed to delete post' });
-        res.sendStatus(204)
-    });
-function store(req, res) {
-
-  const newId = posts[posts.length - 1].id + 1;
-
-  const { titolo, contenuto, immagine, tags } = req.body;
-
-  posts.push({
-    id: newId,
-    titolo,
-    contenuto,
-    immagine,
-    tags,
+export function index(req, res) {
+  const sql = 'SELECT * FROM posts';
+  connection.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ error: 'Errore nella query' });
+    res.json(results);
   });
-
-console.log(req.body);
-
-  res
-    .status(201)
-    .json({ result: true, message: "Inserimento avvenuto con successo" });
 }
 
-
-function update(req, res) {
+export function show(req, res) {
   const id = parseInt(req.params.id);
-    const sql = 'SELECT * FROM posts WHERE id = ?';
-    connection.query(sql, [id], (err, results) => {
 
-        if (err) return res.status(500).json({ error: 'Database query failed' });
+  const postSql = 'SELECT * FROM posts WHERE id = ?';
+  const tagsSql = `
+    SELECT tags.*
+    FROM tags
+    JOIN post_tag ON tags.id = post_tag.tag_id
+    WHERE post_tag.post_id = ?
+  `;
 
-        if (results.length === 0) return res.status(404).json({ error: 'Post not found' });
-        
-        res.json(results[0]);
+  connection.query(postSql, [id], (err, postResults) => {
+    if (err) return res.status(500).json({ error: 'Errore nella query post' });
+    if (postResults.length === 0)
+      return res.status(404).json({ error: 'Post non trovato' });
+
+    const post = postResults[0];
+
+    // BONUS → recupero dei tag
+    connection.query(tagsSql, [id], (err, tagResults) => {
+      if (err) return res.status(500).json({ error: 'Errore nella query tag' });
+      post.tags = tagResults;
+      res.json(post);
     });
-  post.titolo = req.body.titolo;
-  post.contenuto = req.body.contenuto;
-  post.immagine = req.body.immagine;
-  post.tags = req.body.tags;
-
-  console.log("Aggiornato:", post);
+  });
 }
 
-function modify(req, res) {
-  res.send("Modifica parziale post" + req.params.id);
-}
-
-function destroy(req, res) {
+export function destroy(req, res) {
   const id = parseInt(req.params.id);
-  const index = posts.findIndex((post) => post.id === id);
+  const sql = 'DELETE FROM posts WHERE id = ?';
 
-  if (index === -1) {
-    res.status(404);
-    return res.json({
-      status: 404,
-      error: "Not Found",
-      message: "Post non trovato",
-    });
-  }
-
-  const deleted = posts.splice(index, 1);
-  console.log("Eliminato:", deleted);
-  res.sendStatus(204);
+  connection.query(sql, [id], err => {
+    if (err) return res.status(500).json({ error: 'Errore nella cancellazione' });
+    res.sendStatus(204);
+  });
 }
-
-
-module.exports = { index, show, store, update, modify, destroy };
