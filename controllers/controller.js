@@ -1,32 +1,24 @@
 //todo Importo i post
 const posts = require("../data/postsArray");
 
+const connection = require('../data/db');
+
 function index(req, res) {
   const tag = req.query.tags;
 
-  let filteredPosts = posts;
-
-  if(tag){
-    filteredPosts = posts.filter(item => item.tags.includes(tag.toLowerCase()));
-  };
-
-  res.json(filteredPosts);
-}
-
 function show(req, res) {
-  const id = parseInt(req.params.id);
-  const post = posts.find((post) => post.id === id);
-
-  if (!post) {
-    res.status(404);
-    return res.json({
-      error: "Not Found",
-      message: "Post non trovato",
+      connection.query(sql, (err, results) => {
+        if (err) return res.status(500).json({ error: 'Database query failed' });
+        res.json(results);
     });
-  }
-  res.json(post);
-}
+  const id = parseInt(req.params.id);
 
+    connection.query('DELETE FROM posts WHERE id = ?', [id], (err) => {
+
+        if (err) 
+          return res.status(500).json({ error: 'Failed to delete post' });
+        res.sendStatus(204)
+    });
 function store(req, res) {
 
   const newId = posts[posts.length - 1].id + 1;
